@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Our Expenses",
+    "description": "Expenses repartition according to incomes",
+    "slug": "our-expenses",
+    "privacy": "unlisted",
+    "platforms": [
+      "android"
+    ],
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.gheb.our_expenses"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "rn-material-kit-free",
+  "version": "1.4.0",
+  "description": "Material Kit React Native. Coded by Creative Tim",
+  "main": "node_modules/expo/AppEntry.js",
+  "private": true,
+  "scripts": {
+    "start": "cross-env REACT_EDITOR=code expo start",
+    "android": "cross-env REACT_EDITOR=code expo start --android",
+    "ios": "cross-env REACT_EDITOR=code expo start --ios",
+    "eject": "expo eject",
+    "test": "node ./node_modules/jest/bin/jest.js --watchAll"
+  },
+  "jest": {
+    "preset": "jest-expo"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.13.2",
+    "expo": "^39.0.0",
+    "expo-asset": "~8.2.0",
+    "expo-font": "~8.3.0",
+    "expo-linear-gradient": "~8.3.0",
+    "galio-framework": "^0.6.3",
+    "react": "16.13.1",
+    "react-dom": "^17.0.1",
+    "react-native": "https://github.com/expo/react-native/archive/sdk-39.0.3.tar.gz",
+    "react-native-gesture-handler": "~1.7.0",
+    "react-native-modal-dropdown": "^0.6.2",
+    "react-native-screens": "^2.14.0",
+    "react-native-web": "^0.14.8",
+    "react-navigation": "^3.11.0"
+  },
+  "devDependencies": {
+    "babel-preset-expo": "^8.3.0",
+    "cross-env": "^5.2.0",
+    "expo-cli": "^2.4.0",
+    "jest-expo": "^39.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/creativetimofficial/material-kit-react-native/issues"
+  },
+  "homepage": "https://demos.creative-tim.com/material-kit-react-native/"
+}
