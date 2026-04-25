@@ -1,115 +1,77 @@
 import React from 'react';
-import { withNavigation } from 'react-navigation';
-import { TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
-import { Button, Block, NavBar, Input, Text, theme } from 'galio-framework';
+import { TouchableOpacity, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Text from './Text';
 import Icon from './Icon';
 import materialTheme from '../constants/Theme';
 
-const { height, width } = Dimensions.get('window');
-const iPhoneX = () => Platform.OS === 'ios' && (height === 812 || width === 812 || height === 896 || width === 896);
+export default function Header({ back, title, white, transparent, navigation }) {
+  const insets = useSafeAreaInsets();
 
-class Header extends React.Component {
-  handleLeftPress = () => {
-    const { back, navigation } = this.props;
-    return (back ? navigation.goBack() : navigation.openDrawer());
-  }
+  const handleLeftPress = () => {
+    return back ? navigation.goBack() : navigation.openDrawer();
+  };
 
-  render() {
-    const { back, title, white, transparent, navigation } = this.props;
-    const { routeName } = navigation.state;
-    const noShadow = ["Search", "Categories", "Deals", "Pro", "Profile"].includes(routeName);
-    const headerStyles = [
-      !noShadow ? styles.shadow : null,
-      transparent ? { backgroundColor: 'rgba(0,0,0,0)' } : null,
-    ];
+  const headerStyles = [
+    styles.container,
+    transparent ? { backgroundColor: 'rgba(0,0,0,0)' } : styles.shadow,
+  ];
 
-    return (
-      <Block style={headerStyles}>
-        <NavBar
-          back={back}
-          title={title}
-          style={styles.navbar}
-          transparent={transparent}
-          rightStyle={{ alignItems: 'center' }}
-          leftStyle={{ flex: 0.3, paddingTop: 2  }}
-          leftIconName="navicon"
-          leftIconColor={white ? theme.COLORS.WHITE : theme.COLORS.ICON}
-          titleStyle={[
-            styles.title,
-            {color: theme.COLORS[white ? 'WHITE' : 'ICON']},
-          ]}
-          onLeftPress={this.handleLeftPress}
-        />
-      </Block>
-    );
-  }
+  return (
+    <View style={headerStyles}>
+      <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity style={styles.leftButton} onPress={handleLeftPress}>
+          <Icon
+            name={back ? 'chevron-left' : 'navicon'}
+            family="font-awesome"
+            size={back ? 16 : 20}
+            color={white ? '#fff' : materialTheme.COLORS.ICON}
+          />
+        </TouchableOpacity>
+        <View style={styles.titleContainer}>
+          <Text
+            bold
+            size={16}
+            color={white ? '#fff' : materialTheme.COLORS.ICON}
+          >
+            {title}
+          </Text>
+        </View>
+        <View style={styles.rightButton} />
+      </View>
+    </View>
+  );
 }
 
-export default withNavigation(Header);
-
 const styles = StyleSheet.create({
-  button: {
-    padding: 12,
-    position: 'relative',
-  },
-  title: {
-    width: '100%',
-    fontSize: 16,
-    fontWeight: 'bold',
+  container: {
+    backgroundColor: '#fff',
   },
   navbar: {
-    paddingVertical: 0,
-    paddingBottom: theme.SIZES.BASE * 1.5,
-    paddingTop: iPhoneX ? theme.SIZES.BASE * 4 : theme.SIZES.BASE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: materialTheme.SIZES.BASE * 1.5,
+    paddingHorizontal: materialTheme.SIZES.BASE,
     zIndex: 5,
   },
+  leftButton: {
+    flex: 0.3,
+    paddingTop: 2,
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  rightButton: {
+    flex: 0.3,
+    alignItems: 'flex-end',
+  },
   shadow: {
-    backgroundColor: theme.COLORS.WHITE,
+    backgroundColor: '#fff',
     shadowColor: 'black',
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     shadowOpacity: 0.2,
     elevation: 3,
   },
-  notify: {
-    backgroundColor: materialTheme.COLORS.LABEL,
-    borderRadius: 4,
-    height: theme.SIZES.BASE / 2,
-    width: theme.SIZES.BASE / 2,
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  header: {
-    backgroundColor: theme.COLORS.WHITE,
-  },
-  divider: {
-    borderRightWidth: 0.3,
-    borderRightColor: theme.COLORS.MUTED,
-  },
-  search: {
-    height: 48,
-    width: width - 32,
-    marginHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: 3,
-  },
-  tabs: {
-    marginBottom: 24,
-    marginTop: 10,
-    elevation: 4,
-  },
-  tab: {
-    backgroundColor: theme.COLORS.TRANSPARENT,
-    width: width * 0.50,
-    borderRadius: 0,
-    borderWidth: 0,
-    height: 24,
-    elevation: 0,
-  },
-  tabTitle: {
-    lineHeight: 19,
-    fontWeight: '300'
-  },
-})
+});

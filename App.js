@@ -1,16 +1,15 @@
-import React from 'react';
-import { Platform, StatusBar, Image } from 'react-native';
-import { AppLoading } from 'expo';
+import 'react-native-gesture-handler';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Image, Platform, StatusBar, View } from 'react-native';
 import { Asset } from 'expo-asset';
-import { Block, GalioProvider } from 'galio-framework';
+import * as SplashScreen from 'expo-splash-screen';
 
 import AppContainer from './navigation/Screens';
-import { Images, materialTheme } from './constants/';
+import { Images } from './constants/';
 
-// cache app images
-const assetImages = [
-  Images.Onboarding,
-];
+SplashScreen.preventAutoHideAsync();
+
+const assetImages = [Images.Onboarding];
 
 function cacheImages(images) {
   return images.map(image => {
@@ -22,45 +21,36 @@ function cacheImages(images) {
   });
 }
 
-export default class App extends React.Component {
-  state = {
-    isLoadingComplete: false,
-  };
+export default function App() {
+  const [isReady, setIsReady] = useState(false);
 
-  render() {
-    if (!this.state.isLoadingComplete && !this.props.skipLoadingScreen) {
-      return (
-        <AppLoading
-          startAsync={this._loadResourcesAsync}
-          onError={this._handleLoadingError}
-          onFinish={this._handleFinishLoading}
-        />
-      );
-    } else {
-      return (
-        <GalioProvider theme={materialTheme}>
-          <Block flex>
-            {Platform.OS === 'ios' && <StatusBar barStyle="default" />}
-            <AppContainer />
-          </Block>
-        </GalioProvider>
-      );
+  useEffect(() => {
+    async function prepare() {
+      try {
+        await Promise.all(cacheImages(assetImages));
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setIsReady(true);
+      }
     }
+    prepare();
+  }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (isReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [isReady]);
+
+  if (!isReady) {
+    return null;
   }
 
-  _loadResourcesAsync = async () => {
-    return Promise.all([
-      ...cacheImages(assetImages),
-    ]);
-  };
-
-  _handleLoadingError = error => {
-    // In this case, you might want to report the error to your error
-    // reporting service, for example Sentry
-    console.warn(error);
-  };
-
-  _handleFinishLoading = () => {
-    this.setState({ isLoadingComplete: true });
-  };
+  return (
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      {Platform.OS === 'ios' && <StatusBar barStyle="default" />}
+      <AppContainer />
+    </View>
+  );
 }
