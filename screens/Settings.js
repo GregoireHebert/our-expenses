@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Dimensions,
+  ScrollView, StyleSheet,
 } from 'react-native';
 import { palette, fonts, radii, personColor, tokens } from '../constants/Theme';
 import Avatar from '../components/Avatar';
 import PrimaryButton from '../components/PrimaryButton';
 import People from '../utils/db';
-
-const { width } = Dimensions.get('screen');
 
 export default function PeopleScreen({ navigation }) {
   const [people, setPeople] = useState([]);

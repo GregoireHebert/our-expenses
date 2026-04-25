@@ -1,9 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { palette, fonts, personColor } from '../constants/Theme';
 import PrimaryButton from '../components/PrimaryButton';
-
-const { width } = Dimensions.get('screen');
 
 function MiniWordmark() {
   return (

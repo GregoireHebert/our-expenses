@@ -1,13 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Dimensions,
+  ScrollView, StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { palette, fonts, radii, personColor, tokens } from '../constants/Theme';
 import People from '../utils/db';
-
-const { width } = Dimensions.get('screen');
 
 function AvatarDot({ idx, size = 18 }) {
   const c = personColor(idx);
