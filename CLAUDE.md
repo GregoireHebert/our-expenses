@@ -4,36 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-"Our Expenses" is a React Native (Expo SDK 52) iOS app that splits shared expenses between people proportionally based on their income.
+"Our Expenses" (branded **ours.**) is a React Native (Expo SDK 54) iOS app that splits shared expenses between people proportionally based on their incomes. Uses a sage-green pastel design with Bricolage Grotesque + Geist typography.
 
 ## Development Commands
 
 ```bash
-npm start            # Start Expo dev server
-npm run ios          # Run on iOS simulator
-npm test             # Run Jest tests (watch mode)
+yarn start          # Start Expo dev server
+yarn ios            # Run on iOS simulator
+yarn test           # Run Jest tests (watch mode)
 ```
 
 ## Architecture
 
-**Navigation**: React Navigation v7 with a drawer navigator wrapping stack navigators. Configured in `navigation/Screens.js`, custom drawer content in `navigation/Menu.js`.
+**Navigation**: Linear stack flow (no drawer) via `@react-navigation/stack` v7. Configured in `navigation/Screens.js`.
 
-**Screens** (`screens/`): All functional components with hooks.
-- `Onboarding.js` - Welcome/splash screen, entry point
-- `Home.js` - Main calculator: displays income-ratio percentages and computes each person's share of an expense
-- `Settings.js` - CRUD for people (name + income), persisted to AsyncStorage. Social links use `Linking.openURL()`.
+Route order: `Splash` → `Start` → `People` → `Expense`
 
-**Data persistence** (`utils/db.js`): Thin callback-based wrapper around AsyncStorage. Stores a JSON array of people objects under the `@people` key. Data model: `{ name: string, incomes: number, repartition: number, value: number }`.
+**Screens** (`screens/`):
+- `Splash.js` — Animated brand intro with floating expense chips and "ours." wordmark. Auto-advances after 2.4s.
+- `Start.js` — Welcome screen with hero illustration and "Let's go" CTA.
+- `Settings.js` — People management (add/remove people with incomes). Persists to AsyncStorage.
+- `Home.js` — Expense calculator: big amount input + receipt-style split visualization.
 
-**UI layer**: Thin local wrapper components in `components/` (`Block`, `Text`, `Input`, `Button`, `Icon`, `Header`, `Drawer`) replacing the former galio-framework dependency. These wrap standard React Native primitives with convenience props (e.g., `Block` accepts `flex`, `row`, `center`, `middle`, `space`). Material Design color theme defined in `constants/Theme.js`.
+**Data persistence** (`utils/db.js`): Callback-based AsyncStorage wrapper. Stores JSON array under `@people` key. Model: `{ name: string, incomes: number }`.
 
-**State management**: Local component state via `useState` hooks. No global store.
+**Design system** (`constants/Theme.js`):
+- `palette` — sage color tokens (bg, surface, ink, inkSoft, accent, line)
+- `personColor(idx)` — 6-hue rotation for per-person colors (fill, deep, ink, soft)
+- `fonts` — font family constants (display = Bricolage Grotesque, ui = Geist, mono = Geist Mono)
+- `radii` / `space` / `tokens` — spacing and radius tokens
 
-## Key Conventions
+**Shared components** (`components/`):
+- `PrimaryButton.js` — Full-width CTA with accent color and shadow
+- `Avatar.js` — Colored initial avatar with per-person hue
 
-- Components and screens use PascalCase filenames and are functional components
-- `Block` (in `components/Block.js`) is the primary layout container — a thin `View` wrapper with flex shorthand props
-- Colors and sizes come from `constants/Theme.js` (`materialTheme.COLORS`, `materialTheme.SIZES`)
-- Icons use `@expo/vector-icons` (FontAwesome) + a custom GalioExtra icon font for the "shop" icon
-- `babel.config.js` must keep `react-native-reanimated/plugin` as the last plugin (required by drawer navigation)
-- iOS bundle identifier: `com.gheb.ourexpenses`
+**Fonts**: Loaded in `App.js` via `expo-font` + `@expo-google-fonts/*`. All screens reference font family names from `constants/Theme.fonts`.

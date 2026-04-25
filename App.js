@@ -1,25 +1,20 @@
 import 'react-native-gesture-handler';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Image, Platform, StatusBar, View } from 'react-native';
-import { Asset } from 'expo-asset';
+import { View, Platform, StatusBar } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
 
-import AppContainer from './navigation/Screens';
-import { Images } from './constants/';
+import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque/700Bold';
+import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque/800ExtraBold';
+import { Geist_400Regular } from '@expo-google-fonts/geist/400Regular';
+import { Geist_500Medium } from '@expo-google-fonts/geist/500Medium';
+import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
+import { GeistMono_400Regular } from '@expo-google-fonts/geist-mono/400Regular';
+import { GeistMono_600SemiBold } from '@expo-google-fonts/geist-mono/600SemiBold';
+
+import AppNavigator from './navigation/Screens';
 
 SplashScreen.preventAutoHideAsync();
-
-const assetImages = [Images.Onboarding];
-
-function cacheImages(images) {
-  return images.map(image => {
-    if (typeof image === 'string') {
-      return Image.prefetch(image);
-    } else {
-      return Asset.fromModule(image).downloadAsync();
-    }
-  });
-}
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -27,7 +22,15 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        await Promise.all(cacheImages(assetImages));
+        await Font.loadAsync({
+          BricolageGrotesque_700Bold,
+          BricolageGrotesque_800ExtraBold,
+          Geist_400Regular,
+          Geist_500Medium,
+          Geist_600SemiBold,
+          GeistMono_400Regular,
+          GeistMono_600SemiBold,
+        });
       } catch (e) {
         console.warn(e);
       } finally {
@@ -49,8 +52,8 @@ export default function App() {
 
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      {Platform.OS === 'ios' && <StatusBar barStyle="default" />}
-      <AppContainer />
+      {Platform.OS === 'ios' && <StatusBar barStyle="dark-content" />}
+      <AppNavigator />
     </View>
   );
 }
