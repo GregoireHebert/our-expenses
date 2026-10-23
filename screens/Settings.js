@@ -9,6 +9,8 @@ import PrimaryButton from '../components/PrimaryButton';
 import TextField from '../components/TextField';
 import People from '../utils/db';
 
+const MAX_PEOPLE = 10;
+
 function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
   const c = personColor(idx);
   const pct = total > 0 ? ((Number(person.incomes) / total) * 100) : 0;
@@ -134,7 +136,8 @@ export default function PeopleScreen({ navigation }) {
   }, []);
 
   const total = people.reduce((s, p) => s + Number(p.incomes || 0), 0);
-  const canAdd = name.trim().length > 0 && Number(income) > 0;
+  const isFull = people.length >= MAX_PEOPLE;
+  const canAdd = !isFull && name.trim().length > 0 && Number(income) > 0;
   const canContinue = people.length >= 2;
 
   const addPerson = () => {
@@ -208,6 +211,56 @@ export default function PeopleScreen({ navigation }) {
           Add everyone splitting the bills, plus what they earn each month.
         </Text>
 
+        {/* Add form */}
+        {isFull ? (
+          <View style={styles.fullCard}>
+            <Text style={styles.emptyText}>
+              Ten is as big as a gang gets. Remove someone to make room.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <Text style={styles.formLabel}>add someone</Text>
+              <Text style={styles.formLabel}>{people.length} / {MAX_PEOPLE}</Text>
+            </View>
+            <TextField
+              ref={nameRef}
+              value={name}
+              onChangeText={setName}
+              placeholder="Name"
+              placeholderTextColor={palette.inkSoft}
+              style={[styles.input, nameFocused && styles.inputFocused]}
+              onFocus={() => setNameFocused(true)}
+              onBlur={() => setNameFocused(false)}
+            />
+            <View style={styles.incomeInputWrap}>
+              <TextField
+                value={income}
+                onChangeText={(v) => setIncome(v.replace(/[^\d.]/g, ''))}
+                placeholder="Monthly income"
+                placeholderTextColor={palette.inkSoft}
+                keyboardType="decimal-pad"
+                style={[styles.input, styles.incomeInput, incomeFocused && styles.inputFocused]}
+                onFocus={() => setIncomeFocused(true)}
+                onBlur={() => setIncomeFocused(false)}
+              />
+              <View style={styles.euroSuffix} pointerEvents="none">
+                <Text style={styles.euroText}>{'\u20AC'}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.addButton, canAdd ? styles.addButtonActive : styles.addButtonDisabled]}
+              onPress={addPerson}
+              disabled={!canAdd}
+            >
+              <Text style={[styles.addButtonText, canAdd ? styles.addButtonTextActive : styles.addButtonTextDisabled]}>
+                + Add to the gang
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* People list */}
         {people.length > 0 ? (
           <View style={styles.listCard}>
@@ -226,49 +279,10 @@ export default function PeopleScreen({ navigation }) {
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              No-one yet. Add your first person below {'\u{1F447}'}
+              No-one yet. Add your first person above {'\u{1F446}'}
             </Text>
           </View>
         )}
-
-        {/* Add form */}
-        <View style={styles.formCard}>
-          <Text style={styles.formLabel}>add someone</Text>
-          <TextField
-            ref={nameRef}
-            value={name}
-            onChangeText={setName}
-            placeholder="Name"
-            placeholderTextColor={palette.inkSoft}
-            style={[styles.input, nameFocused && styles.inputFocused]}
-            onFocus={() => setNameFocused(true)}
-            onBlur={() => setNameFocused(false)}
-          />
-          <View style={styles.incomeInputWrap}>
-            <TextField
-              value={income}
-              onChangeText={(v) => setIncome(v.replace(/[^\d.]/g, ''))}
-              placeholder="Monthly income"
-              placeholderTextColor={palette.inkSoft}
-              keyboardType="decimal-pad"
-              style={[styles.input, styles.incomeInput, incomeFocused && styles.inputFocused]}
-              onFocus={() => setIncomeFocused(true)}
-              onBlur={() => setIncomeFocused(false)}
-            />
-            <View style={styles.euroSuffix} pointerEvents="none">
-              <Text style={styles.euroText}>{'\u20AC'}</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[styles.addButton, canAdd ? styles.addButtonActive : styles.addButtonDisabled]}
-            onPress={addPerson}
-            disabled={!canAdd}
-          >
-            <Text style={[styles.addButtonText, canAdd ? styles.addButtonTextActive : styles.addButtonTextDisabled]}>
-              + Add to the gang
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={{ minHeight: 12, flex: 1 }} />
       </ScrollView>
@@ -506,13 +520,28 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 18,
   },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   formLabel: {
     fontFamily: fonts.mono,
     fontSize: 10,
     letterSpacing: 10 * 0.16,
     textTransform: 'uppercase',
     color: palette.inkSoft,
-    marginBottom: 10,
+  },
+  fullCard: {
+    backgroundColor: palette.surface,
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    borderStyle: 'dashed',
+    borderRadius: radii.cardMedium,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 18,
   },
   input: {
     fontFamily: fonts.ui,

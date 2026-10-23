@@ -30,7 +30,9 @@ and it hides while fewer than two people are saved, since nothing is reachable y
 **Screens** (`screens/`):
 - `Splash.js` — Animated brand intro with floating expense chips and "ours." wordmark. Auto-advances after 2.4s, to `Expense` if people are stored, to `Start` otherwise.
 - `Start.js` — Welcome screen with hero illustration and "Let's go" CTA.
-- `Settings.js` — People management (add/remove people with incomes). Persists to AsyncStorage.
+- `Settings.js` — People management (add/remove/edit people with incomes), capped at `MAX_PEOPLE`.
+  The add form sits above the list, and at the cap it gives way to a note instead of a dead form.
+  Persists to AsyncStorage.
 - `Home.js` — Expense calculator: big amount input, receipt-style split, a save button, and the
   most recent saved expenses. The recent list is capped to what fits: the screen measures its own
   height and the list's offset, then divides the leftover room by a fixed row height. A receipt
