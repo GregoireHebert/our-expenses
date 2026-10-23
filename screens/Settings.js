@@ -236,6 +236,9 @@ export default function PeopleScreen({ navigation }) {
         <Text style={styles.subtitle}>
           Add everyone splitting the bills, plus what they earn each month.
         </Text>
+        <Text style={styles.privacyNote}>
+          What everyone earns stays between you and this phone.
+        </Text>
 
         {/* Add form */}
         {isFull ? (
@@ -376,6 +379,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 15 * 1.4,
     color: palette.inkSoft,
+    marginBottom: 8,
+  },
+  privacyNote: {
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    lineHeight: 13 * 1.4,
+    color: palette.inkSoft,
+    opacity: 0.75,
     marginBottom: 22,
   },
   // People list card

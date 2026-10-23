@@ -6,7 +6,7 @@ import PrimaryButton from '../components/PrimaryButton';
 function MiniWordmark() {
   return (
     <View style={styles.miniRow}>
-      <Text style={styles.miniText}>ours</Text>
+      <Text style={styles.miniText}>ours expenses</Text>
       <View style={styles.miniDot} />
     </View>
   );
@@ -69,6 +69,7 @@ export default function Start({ navigation }) {
           Let's go {'\u2192'}
         </PrimaryButton>
         <Text style={styles.footnote}>takes about 30 seconds</Text>
+        <Text style={styles.privacyNote}>stays between you and this phone</Text>
       </View>
     </View>
   );
@@ -166,5 +167,15 @@ const styles = StyleSheet.create({
     color: palette.inkSoft,
     textAlign: 'center',
     marginTop: 14,
+  },
+  privacyNote: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 11 * 0.14,
+    textTransform: 'uppercase',
+    color: palette.inkSoft,
+    opacity: 0.6,
+    textAlign: 'center',
+    marginTop: 5,
   },
 });
