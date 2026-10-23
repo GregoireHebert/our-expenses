@@ -5,7 +5,18 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { palette, fonts, radii, personColor, tokens } from '../constants/Theme';
+import TextField from '../components/TextField';
+import PrimaryButton from '../components/PrimaryButton';
 import People from '../utils/db';
+import Expenses from '../utils/expenses';
+import { shortDate } from '../utils/format';
+
+// The recent list fills whatever room the receipt leaves, so its parts are measured rather than
+// guessed: every row is exactly RECENT_ROW tall, and the two blocks around it cost a fixed height.
+const RECENT_ROW = 52;
+const RECENT_GAP = 8;
+const RECENT_HEADER = 20;
+const HISTORY_BLOCK = 88;
 
 function AvatarDot({ idx, size = 18 }) {
   const c = personColor(idx);
@@ -33,6 +44,43 @@ function PeoplePill({ people, onPress }) {
       </View>
       <Text style={styles.peoplePillText}>{people.length} people</Text>
     </TouchableOpacity>
+  );
+}
+
+function ClockGlyph({ size = 15, color = palette.ink }) {
+  const dial = size - 3;
+
+  return (
+    <View style={[styles.clock, { width: size, height: size, borderRadius: size / 2, borderColor: color }]}>
+      <View style={[styles.clockHand, {
+        left: dial / 2 - 0.75,
+        top: dial / 2 - dial * 0.3,
+        width: 1.5,
+        height: dial * 0.3,
+        backgroundColor: color,
+      }]} />
+      <View style={[styles.clockHand, {
+        left: dial / 2,
+        top: dial / 2 - 0.75,
+        width: dial * 0.26,
+        height: 1.5,
+        backgroundColor: color,
+      }]} />
+    </View>
+  );
+}
+
+function RecentRow({ expense }) {
+  return (
+    <View style={styles.recentRow}>
+      <View style={styles.recentText}>
+        <Text style={styles.recentLabel} numberOfLines={1}>
+          {expense.label || 'untitled expense'}
+        </Text>
+        <Text style={styles.recentDate}>{shortDate(expense.savedAt)}</Text>
+      </View>
+      <Text style={styles.recentAmount}>{expense.amount.toFixed(2)}{'\u20AC'}</Text>
+    </View>
   );
 }
 
@@ -70,8 +118,11 @@ function ReceiptViz({ split, total, label }) {
 
 export default function ExpenseScreen({ navigation }) {
   const [people, setPeople] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [amount, setAmount] = useState('');
   const [label, setLabel] = useState('');
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [recentTop, setRecentTop] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,6 +132,7 @@ export default function ExpenseScreen({ navigation }) {
           navigation.navigate('People');
         }
       });
+      Expenses.all(loaded => setExpenses(loaded || []));
     }, [navigation])
   );
 
@@ -98,25 +150,47 @@ export default function ExpenseScreen({ navigation }) {
     };
   });
 
+  const roomLeft = viewportHeight - recentTop - HISTORY_BLOCK - RECENT_HEADER;
+  const fits = Math.floor(roomLeft / (RECENT_ROW + RECENT_GAP));
+  const recentCount = Math.max(0, Math.min(expenses.length, fits));
+
+  const canSave = num > 0 && people.length >= 2;
+
+  const saveExpense = () => {
+    if (!canSave) return;
+
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      label: label.trim(),
+      amount: num,
+      savedAt: Date.now(),
+      split: split.map(s => ({ name: s.name, owes: s.owes, pct: s.pct })),
+    };
+
+    const updated = [entry, ...expenses];
+    setExpenses(updated);
+    Expenses.save(updated);
+    setLabel('');
+    setAmount('');
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
       >
         {/* Header row */}
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backArrow}>{'\u2190'}</Text>
-          </TouchableOpacity>
           <PeoplePill people={people} onPress={() => navigation.navigate('People')} />
         </View>
 
         {/* Expense input card */}
         <View style={styles.expenseCard}>
           <Text style={styles.monoLabel}>this expense</Text>
-          <TextInput
+          <TextField
             value={label}
             onChangeText={setLabel}
             placeholder="What was it?"
@@ -146,6 +220,33 @@ export default function ExpenseScreen({ navigation }) {
           </View>
           <ReceiptViz split={split} total={num} label={label} />
         </View>
+
+        <PrimaryButton onPress={saveExpense} disabled={!canSave}>
+          Save this expense
+        </PrimaryButton>
+
+        {/* Recent expenses, as many as the room under the receipt allows */}
+        <View
+          style={styles.recentSection}
+          onLayout={(e) => setRecentTop(e.nativeEvent.layout.y)}
+        >
+          {recentCount > 0 && (
+            <View>
+              <Text style={styles.monoLabel}>recent</Text>
+              {expenses.slice(0, recentCount).map((expense) => (
+                <RecentRow key={expense.id} expense={expense} />
+              ))}
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.historyButton}
+          onPress={() => navigation.navigate('History')}
+        >
+          <ClockGlyph size={15} color={palette.ink} />
+          <Text style={styles.historyButtonText}>See complete history</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -164,22 +265,8 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginBottom: 14,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.input,
-    backgroundColor: palette.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: palette.line,
-  },
-  backArrow: {
-    fontSize: 18,
-    color: palette.ink,
   },
   peoplePill: {
     flexDirection: 'row',
@@ -279,6 +366,70 @@ const styles = StyleSheet.create({
     letterSpacing: 11 * 0.14,
     textTransform: 'uppercase',
     color: palette.inkSoft,
+  },
+  // Recent expenses
+  recentSection: {
+    marginTop: 18,
+  },
+  recentRow: {
+    height: RECENT_ROW,
+    marginBottom: RECENT_GAP,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.surface,
+    borderRadius: radii.input,
+    paddingHorizontal: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: palette.line,
+  },
+  recentText: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 12,
+  },
+  recentLabel: {
+    fontFamily: fonts.uiMedium,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  recentDate: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: palette.inkSoft,
+    marginTop: 2,
+  },
+  recentAmount: {
+    fontFamily: fonts.monoSemiBold,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  // See complete history
+  historyButton: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: palette.surface,
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    borderBottomWidth: 2,
+    borderRadius: radii.cardMedium,
+    paddingVertical: 13,
+  },
+  historyButtonText: {
+    fontFamily: fonts.uiSemiBold,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  clock: {
+    borderWidth: 1.5,
+    position: 'relative',
+  },
+  clockHand: {
+    position: 'absolute',
+    borderRadius: 1,
   },
   // Receipt viz
   receipt: {

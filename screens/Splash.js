@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, Easing, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { palette, fonts } from '../constants/Theme';
+import People from '../utils/db';
 
 const { width, height } = Dimensions.get('screen');
 
@@ -82,6 +83,9 @@ function FloatingChip({ chip, index }) {
 }
 
 export default function Splash({ navigation }) {
+  const [target, setTarget] = useState(null);
+  const [introDone, setIntroDone] = useState(false);
+  const handedOver = useRef(false);
   const wordY = useRef(new Animated.Value(20)).current;
   const wordScale = useRef(new Animated.Value(0.92)).current;
   const wordOpacity = useRef(new Animated.Value(0)).current;
@@ -122,12 +126,22 @@ export default function Splash({ navigation }) {
     dotPulse.start();
 
     // Auto-advance
-    const timer = setTimeout(() => navigation.replace('Start'), 2400);
+    const timer = setTimeout(() => setIntroDone(true), 2400);
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    People.all(loaded => setTarget((loaded || []).length >= 2 ? 'Expense' : 'Start'));
+  }, []);
+
+  useEffect(() => {
+    if (!introDone || !target || handedOver.current) return;
+    handedOver.current = true;
+    navigation.replace(target);
+  }, [introDone, target]);
+
   return (
-    <TouchableWithoutFeedback onPress={() => navigation.replace('Start')}>
+    <TouchableWithoutFeedback onPress={() => setIntroDone(true)}>
       <View style={styles.container}>
         <LinearGradient
           colors={[palette.surface, palette.bg]}

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TouchableOpacity,
   ScrollView, StyleSheet,
 } from 'react-native';
 import { palette, fonts, radii, personColor, tokens } from '../constants/Theme';
 import Avatar from '../components/Avatar';
 import PrimaryButton from '../components/PrimaryButton';
+import TextField from '../components/TextField';
 import People from '../utils/db';
 
 function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
@@ -46,7 +47,7 @@ function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
       ]}>
         <Avatar person={{ name: draftName || person.name }} idx={idx} />
         <View style={styles.editFields}>
-          <TextInput
+          <TextField
             ref={editNameRef}
             value={draftName}
             onChangeText={setDraftName}
@@ -58,7 +59,7 @@ function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
             onSubmitEditing={save}
           />
           <View style={styles.editIncomeWrap}>
-            <TextInput
+            <TextField
               value={draftIncome}
               onChangeText={(v) => setDraftIncome(v.replace(/[^\d.]/g, ''))}
               placeholder="Income"
@@ -158,6 +159,29 @@ export default function PeopleScreen({ navigation }) {
     People.save(updated);
   };
 
+  const goToExpense = () => {
+    const comingFromExpense = navigation.getState().routes.some(r => r.name === 'Expense');
+    if (comingFromExpense) {
+      navigation.goBack();
+      return;
+    }
+    // Resetting drops the onboarding routes: a stack root has no swipe-back gesture.
+    navigation.reset({ index: 0, routes: [{ name: 'Expense' }] });
+  };
+
+  // Opening the app on this screen leaves nothing to go back to, so the arrow heads for the
+  // expenses instead, and hides altogether while the gang is too small for them.
+  const hasHistory = navigation.canGoBack();
+  const showBack = hasHistory || canContinue;
+
+  const leave = () => {
+    if (hasHistory) {
+      navigation.goBack();
+      return;
+    }
+    navigation.reset({ index: 0, routes: [{ name: 'Expense' }] });
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -167,11 +191,15 @@ export default function PeopleScreen({ navigation }) {
       >
         {/* Header row */}
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backArrow}>{'\u2190'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.stepLabel}>step 1 of 2</Text>
-          <View style={{ width: 40 }} />
+          {showBack ? (
+            <TouchableOpacity style={styles.backButton} onPress={leave}>
+              <Text style={styles.backArrow}>{'\u2190'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerSpacer} />
+          )}
+          <Text style={styles.stepLabel}>configure the gang</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
         {/* Title */}
@@ -206,7 +234,7 @@ export default function PeopleScreen({ navigation }) {
         {/* Add form */}
         <View style={styles.formCard}>
           <Text style={styles.formLabel}>add someone</Text>
-          <TextInput
+          <TextField
             ref={nameRef}
             value={name}
             onChangeText={setName}
@@ -217,7 +245,7 @@ export default function PeopleScreen({ navigation }) {
             onBlur={() => setNameFocused(false)}
           />
           <View style={styles.incomeInputWrap}>
-            <TextInput
+            <TextField
               value={income}
               onChangeText={(v) => setIncome(v.replace(/[^\d.]/g, ''))}
               placeholder="Monthly income"
@@ -247,8 +275,8 @@ export default function PeopleScreen({ navigation }) {
 
       {/* Fixed CTA at bottom */}
       <View style={styles.ctaWrap}>
-        <PrimaryButton onPress={() => navigation.navigate('Expense')} disabled={!canContinue}>
-          {canContinue ? `Continue with ${people.length} \u2192` : 'Add at least 2 people'}
+        <PrimaryButton onPress={goToExpense} disabled={!canContinue}>
+          {canContinue ? `Save this gang of ${people.length}` : 'Add at least 2 people'}
         </PrimaryButton>
       </View>
     </View>
@@ -284,6 +312,9 @@ const styles = StyleSheet.create({
   backArrow: {
     fontSize: 18,
     color: palette.ink,
+  },
+  headerSpacer: {
+    width: 40,
   },
   stepLabel: {
     fontFamily: fonts.mono,

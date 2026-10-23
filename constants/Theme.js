@@ -16,6 +16,7 @@ export const tokens = {
   receiptBg:  '#fffbf4',
   accentShadow: '#007c36',
   accentShadowLight: 'rgba(0,124,54,0.35)',
+  danger:     '#bc4527',
 };
 
 // Per-person palette — 6 hues cycling by index
