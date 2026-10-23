@@ -14,8 +14,8 @@ function MiniWordmark() {
 
 function HeroIllustration() {
   const people = [
-    { name: 'Mo',  idx: 0, offsetX: -70, offsetY: 0,   size: 110, rotate: '-8deg', pct: '40%' },
-    { name: 'Sky', idx: 1, offsetX: 30,  offsetY: -10, size: 130, rotate: '6deg',  pct: '60%' },
+    { name: 'Gir',  idx: 0, offsetX: -70, offsetY: 0,   size: 110, rotate: '-8deg', pct: '40%' },
+    { name: 'Yal', idx: 1, offsetX: 30,  offsetY: -10, size: 130, rotate: '6deg',  pct: '60%' },
   ];
 
   return (
@@ -39,9 +39,6 @@ function HeroIllustration() {
           </View>
         );
       })}
-      <View style={styles.divideCircle}>
-        <Text style={styles.divideSymbol}>{'\u00F7'}</Text>
-      </View>
     </View>
   );
 }
@@ -136,23 +133,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     opacity: 0.7,
     letterSpacing: 11 * 0.05,
-  },
-  divideCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: palette.surface,
-    borderWidth: 3,
-    borderStyle: 'dashed',
-    borderColor: palette.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-  },
-  divideSymbol: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    color: palette.ink,
   },
   copyBlock: {
     flex: 1,

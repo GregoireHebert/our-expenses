@@ -8,6 +8,118 @@ import Avatar from '../components/Avatar';
 import PrimaryButton from '../components/PrimaryButton';
 import People from '../utils/db';
 
+function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
+  const c = personColor(idx);
+  const pct = total > 0 ? ((Number(person.incomes) / total) * 100) : 0;
+
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(person.name);
+  const [draftIncome, setDraftIncome] = useState(String(person.incomes));
+  const [nameFocused, setNameFocused] = useState(false);
+  const [incomeFocused, setIncomeFocused] = useState(false);
+  const editNameRef = useRef(null);
+
+  useEffect(() => {
+    if (editing) {
+      setDraftName(person.name);
+      setDraftIncome(String(person.incomes));
+      setTimeout(() => editNameRef.current?.focus(), 30);
+    }
+  }, [editing]);
+
+  const cancel = () => setEditing(false);
+
+  const save = () => {
+    const n = draftName.trim();
+    const inc = Number(draftIncome);
+    if (!n || !inc) { setEditing(false); return; }
+    onSave({ name: n, incomes: String(inc) });
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <View style={[
+        styles.personRow,
+        { backgroundColor: c.soft, borderRadius: 16 },
+        !isLast && styles.personRowBorder,
+      ]}>
+        <Avatar person={{ name: draftName || person.name }} idx={idx} />
+        <View style={styles.editFields}>
+          <TextInput
+            ref={editNameRef}
+            value={draftName}
+            onChangeText={setDraftName}
+            placeholder="Name"
+            placeholderTextColor={palette.inkSoft}
+            style={[styles.editInput, styles.editNameInput, nameFocused && styles.inputFocused]}
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => setNameFocused(false)}
+            onSubmitEditing={save}
+          />
+          <View style={styles.editIncomeWrap}>
+            <TextInput
+              value={draftIncome}
+              onChangeText={(v) => setDraftIncome(v.replace(/[^\d.]/g, ''))}
+              placeholder="Income"
+              placeholderTextColor={palette.inkSoft}
+              keyboardType="decimal-pad"
+              style={[styles.editInput, styles.editIncomeInput, incomeFocused && styles.inputFocused]}
+              onFocus={() => setIncomeFocused(true)}
+              onBlur={() => setIncomeFocused(false)}
+              onSubmitEditing={save}
+            />
+            <View style={styles.editEuroSuffix} pointerEvents="none">
+              <Text style={styles.editEuroText}>{'\u20AC'}</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.editActions}>
+          <TouchableOpacity style={styles.saveBtn} onPress={save}>
+            <Text style={styles.saveBtnText}>{'\u2713'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={cancel}>
+            <Text style={styles.cancelBtnText}>{'\u00D7'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={() => setEditing(true)}
+      style={[styles.personRow, !isLast && styles.personRowBorder]}
+    >
+      <Avatar person={person} idx={idx} />
+      <View style={styles.personInfo}>
+        <View style={styles.nameRow}>
+          <Text style={styles.personName} numberOfLines={1}>{person.name}</Text>
+          <Text style={styles.editHint}>edit</Text>
+        </View>
+        <View style={styles.incomeRow}>
+          <Text style={styles.incomeMono}>
+            {Number(person.incomes).toLocaleString()}{'\u20AC'}/mo
+          </Text>
+          <View style={[styles.pctChip, { backgroundColor: c.soft }]}>
+            <Text style={[styles.pctText, { color: c.ink }]}>
+              {pct.toFixed(0)}%
+            </Text>
+          </View>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={styles.removeBtn}
+        onPress={(e) => { e.stopPropagation?.(); onRemove(); }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={styles.removeX}>{'\u00D7'}</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
 export default function PeopleScreen({ navigation }) {
   const [people, setPeople] = useState([]);
   const [name, setName] = useState('');
@@ -40,6 +152,12 @@ export default function PeopleScreen({ navigation }) {
     People.save(updated);
   };
 
+  const updatePerson = (index, patch) => {
+    const updated = people.map((p, i) => i === index ? { ...p, ...patch } : p);
+    setPeople(updated);
+    People.save(updated);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -65,34 +183,17 @@ export default function PeopleScreen({ navigation }) {
         {/* People list */}
         {people.length > 0 ? (
           <View style={styles.listCard}>
-            {people.map((person, i) => {
-              const c = personColor(i);
-              const pct = total > 0 ? ((Number(person.incomes) / total) * 100) : 0;
-              return (
-                <View key={`${person.name}-${i}`} style={[
-                  styles.personRow,
-                  i < people.length - 1 && styles.personRowBorder,
-                ]}>
-                  <Avatar person={person} idx={i} />
-                  <View style={styles.personInfo}>
-                    <Text style={styles.personName} numberOfLines={1}>{person.name}</Text>
-                    <View style={styles.incomeRow}>
-                      <Text style={styles.incomeMono}>
-                        {Number(person.incomes).toLocaleString()}{'\u20AC'}/mo
-                      </Text>
-                      <View style={[styles.pctChip, { backgroundColor: c.soft }]}>
-                        <Text style={[styles.pctText, { color: c.ink }]}>
-                          {pct.toFixed(0)}%
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.removeBtn} onPress={() => removePerson(i)}>
-                    <Text style={styles.removeX}>{'\u00D7'}</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+            {people.map((person, i) => (
+              <PersonRow
+                key={`${person.name}-${i}`}
+                person={person}
+                idx={i}
+                total={total}
+                isLast={i === people.length - 1}
+                onSave={(patch) => updatePerson(i, patch)}
+                onRemove={() => removePerson(i)}
+              />
+            ))}
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -215,6 +316,7 @@ const styles = StyleSheet.create({
     padding: 6,
     marginBottom: 18,
   },
+  // Person row — shared between view and edit modes
   personRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,14 +329,27 @@ const styles = StyleSheet.create({
     borderBottomColor: palette.line,
     borderStyle: 'dashed',
   },
+  // View mode
   personInfo: {
     flex: 1,
     minWidth: 0,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
   },
   personName: {
     fontFamily: fonts.displaySemiBold,
     fontSize: 19,
     color: palette.ink,
+  },
+  editHint: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: palette.inkSoft,
+    opacity: 0.6,
+    letterSpacing: 10 * 0.08,
   },
   incomeRow: {
     flexDirection: 'row',
@@ -261,6 +376,77 @@ const styles = StyleSheet.create({
   },
   removeX: {
     fontSize: 18,
+    color: palette.inkSoft,
+  },
+  // Edit mode
+  editFields: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  editInput: {
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    backgroundColor: palette.surface,
+    color: palette.ink,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  editNameInput: {
+    fontFamily: fonts.displaySemiBold,
+    fontSize: 17,
+  },
+  editIncomeWrap: {
+    position: 'relative',
+  },
+  editIncomeInput: {
+    fontFamily: fonts.ui,
+    fontSize: 14,
+    paddingRight: 28,
+  },
+  editEuroSuffix: {
+    position: 'absolute',
+    right: 10,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  editEuroText: {
+    fontFamily: fonts.uiSemiBold,
+    fontSize: 14,
+    color: palette.inkSoft,
+  },
+  inputFocused: {
+    borderColor: palette.accent,
+  },
+  editActions: {
+    gap: 6,
+  },
+  saveBtn: {
+    width: 36,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: palette.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnText: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  cancelBtn: {
+    width: 36,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: palette.surface,
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 14,
     color: palette.inkSoft,
   },
   // Empty state
@@ -308,9 +494,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 10,
-  },
-  inputFocused: {
-    borderColor: palette.accent,
   },
   incomeInputWrap: {
     position: 'relative',

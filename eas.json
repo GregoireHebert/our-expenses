@@ -17,9 +17,7 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "gregoirehebert@icloud.com",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "appleId": "gregoirehebert@icloud.com"
       }
     }
   }
