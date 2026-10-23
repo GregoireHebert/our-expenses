@@ -16,6 +16,8 @@ function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
   const pct = total > 0 ? ((Number(person.incomes) / total) * 100) : 0;
 
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
   const [draftName, setDraftName] = useState(person.name);
   const [draftIncome, setDraftIncome] = useState(String(person.incomes));
   const [nameFocused, setNameFocused] = useState(false);
@@ -89,6 +91,30 @@ function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
     );
   }
 
+  if (confirming) {
+    return (
+      <View style={[
+        styles.personRow,
+        styles.personRowConfirm,
+        !isLast && styles.personRowBorder,
+      ]}>
+        <Avatar person={person} idx={idx} />
+        <View style={styles.personInfo}>
+          <Text style={styles.personName} numberOfLines={1}>Remove {person.name}?</Text>
+          <Text style={styles.confirmHint}>Past receipts keep their split.</Text>
+        </View>
+        <View style={styles.editActions}>
+          <TouchableOpacity style={styles.confirmBtn} onPress={onRemove}>
+            <Text style={styles.saveBtnText}>{'✓'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setConfirming(false)}>
+            <Text style={styles.cancelBtnText}>{'×'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -114,7 +140,7 @@ function PersonRow({ person, idx, total, isLast, onSave, onRemove }) {
       </View>
       <TouchableOpacity
         style={styles.removeBtn}
-        onPress={(e) => { e.stopPropagation?.(); onRemove(); }}
+        onPress={(e) => { e.stopPropagation?.(); setConfirming(true); }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Text style={styles.removeX}>{'\u00D7'}</Text>
@@ -369,6 +395,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 12,
   },
+  personRowConfirm: {
+    backgroundColor: tokens.dangerSoft,
+    borderRadius: 16,
+  },
   personRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: palette.line,
@@ -415,6 +445,12 @@ const styles = StyleSheet.create({
   pctText: {
     fontFamily: fonts.monoSemiBold,
     fontSize: 12,
+  },
+  confirmHint: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: tokens.danger,
+    marginTop: 2,
   },
   removeBtn: {
     padding: 8,
@@ -467,6 +503,14 @@ const styles = StyleSheet.create({
   },
   editActions: {
     gap: 6,
+  },
+  confirmBtn: {
+    width: 36,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: tokens.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveBtn: {
     width: 36,

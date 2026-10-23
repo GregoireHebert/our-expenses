@@ -31,6 +31,9 @@ and it hides while fewer than two people are saved, since nothing is reachable y
 - `Splash.js` — Animated brand intro with floating expense chips and "ours." wordmark. Auto-advances after 2.4s, to `Expense` if people are stored, to `Start` otherwise.
 - `Start.js` — Welcome screen with hero illustration and "Let's go" CTA.
 - `Settings.js` — People management (add/remove/edit people with incomes), capped at `MAX_PEOPLE`.
+  Removing someone swaps the row into a confirm state built like the inline edit state, red ✓ to
+  go through with it and × to back out, so no single tap drops a person. It rewrites `@people`
+  only: this screen never touches the expense store, and saved receipts carry their own split.
   The add form sits above the list, and at the cap it gives way to a note instead of a dead form.
   Persists to AsyncStorage.
 - `Home.js` — Expense calculator: big amount input, receipt-style split, a save button, and the
@@ -50,6 +53,12 @@ and it hides while fewer than two people are saved, since nothing is reachable y
   `Select all` means the whole history rather than the loaded rows, and unticking a row under it
   records an exclusion instead of collapsing the selection to what is on screen, which keeps the
   counter honest about pages nobody has scrolled to.
+  A row has two targets: the checkbox selects, the rest opens the receipt. Opening measures the
+  row with `measureInWindow` and grows a card from that frame to `OPEN_FRAME`, cross-fading the
+  row's own text out and the receipt in; closing runs it backwards and unmounts on arrival.
+  Position and size have no native-driver equivalent, so the animation runs in JS; moving it to
+  Reanimated would put it on the UI thread at the cost of a native rebuild. Paging is suspended
+  while a card is open, so the row cannot slide out from under the frame it has to return to.
 
 **Data persistence**: Callback-based AsyncStorage wrappers, one module per concern.
 - `utils/db.js` — people under `@people`. Model: `{ name: string, incomes: number }`.
@@ -74,6 +83,8 @@ and it hides while fewer than two people are saved, since nothing is reachable y
 **Shared components** (`components/`):
 - `PrimaryButton.js` — Full-width CTA with accent color and shadow
 - `Avatar.js` — Colored initial avatar with per-person hue
+- `Receipt.js` — the receipt block. The expense screen draws it live, history replays it from a
+  saved snapshot, so both read from one source. Rows need `{ name, pct, owes, idx }`.
 - `TextField.js` — `TextInput` that draws its own placeholder, because iOS squeezes the native one
   into overlapping letters when the input carries a custom `fontFamily`. Use it for every input with
   a placeholder.

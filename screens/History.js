@@ -1,11 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity,
+  View, Text, TouchableOpacity, Animated, Easing, Dimensions,
   FlatList, StyleSheet,
 } from 'react-native';
 import { palette, fonts, radii, tokens } from '../constants/Theme';
+import Receipt from '../components/Receipt';
 import Expenses from '../utils/expenses';
 import { fullDate } from '../utils/format';
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+
+// Where a row grows to. The insets match the screen's own padding, so the open card lands where a
+// screen would start.
+const OPEN_FRAME = { x: 24, y: 60, width: SCREEN_W - 48, height: SCREEN_H - 88 };
+
+const OPEN_MS = 340;
+const CLOSE_MS = 260;
 
 // Two screenfuls to start with, then the same again each time the list runs out.
 const PAGE = 20;
@@ -26,22 +36,32 @@ function Checkbox({ checked }) {
   );
 }
 
-function ExpenseRow({ expense, checked, onToggle }) {
+// The checkbox selects; the rest of the row opens the receipt. The row measures itself on the way,
+// so the card can grow from exactly where it sat.
+function ExpenseRow({ expense, checked, onToggle, onOpen }) {
+  const box = useRef(null);
+
+  const open = () => {
+    box.current?.measureInWindow((x, y, width, height) => {
+      onOpen(expense, { x, y, width, height });
+    });
+  };
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onToggle}
-      style={[styles.row, checked && styles.rowChecked]}
-    >
-      <Checkbox checked={checked} />
-      <View style={styles.rowText}>
-        <Text style={styles.rowLabel} numberOfLines={1}>
-          {expense.label || 'untitled expense'}
-        </Text>
-        <Text style={styles.rowDate}>{fullDate(expense.savedAt)}</Text>
-      </View>
-      <Text style={styles.rowAmount}>{expense.amount.toFixed(2)}{'€'}</Text>
-    </TouchableOpacity>
+    <View ref={box} collapsable={false} style={[styles.row, checked && styles.rowChecked]}>
+      <TouchableOpacity onPress={onToggle} hitSlop={{ top: 12, bottom: 12, left: 12, right: 6 }}>
+        <Checkbox checked={checked} />
+      </TouchableOpacity>
+      <TouchableOpacity activeOpacity={0.7} onPress={open} style={styles.rowBody}>
+        <View style={styles.rowText}>
+          <Text style={styles.rowLabel} numberOfLines={1}>
+            {expense.label || 'untitled expense'}
+          </Text>
+          <Text style={styles.rowDate}>{fullDate(expense.savedAt)}</Text>
+        </View>
+        <Text style={styles.rowAmount}>{expense.amount.toFixed(2)}{'€'}</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -86,7 +106,7 @@ export default function HistoryScreen({ navigation }) {
   useEffect(() => { load(false); }, [load]);
 
   const loadMore = () => {
-    if (busy || atEnd || !ready || items.length === 0) return;
+    if (open || busy || atEnd || !ready || items.length === 0) return;
     setBusy('end');
     Expenses.page(items[items.length - 1].id, PAGE, (result) => {
       const total = items.length + result.items.length;
@@ -101,7 +121,7 @@ export default function HistoryScreen({ navigation }) {
   };
 
   const loadPrevious = () => {
-    if (busy || atStart || !ready || items.length === 0) return;
+    if (open || busy || atStart || !ready || items.length === 0) return;
     setBusy('start');
     Expenses.pageBefore(items[0].id, PAGE, (result) => {
       const total = items.length + result.items.length;
@@ -112,6 +132,34 @@ export default function HistoryScreen({ navigation }) {
       if (total > WINDOW) setAtEnd(false);
       setAtStart(result.done);
       setBusy(null);
+    });
+  };
+
+  // The open receipt. `frame` is where its row sat on screen, which is both where the card grows
+  // from and where it shrinks back to.
+  const [open, setOpen] = useState(null);
+  const grow = useRef(new Animated.Value(0)).current;
+
+  const openExpense = (expense, frame) => {
+    setOpen({ expense, frame });
+    grow.setValue(0);
+    Animated.timing(grow, {
+      toValue: 1,
+      duration: OPEN_MS,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      // Width, height and position have no native-driver equivalent, so this one runs in JS.
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const closeExpense = () => {
+    Animated.timing(grow, {
+      toValue: 0,
+      duration: CLOSE_MS,
+      easing: Easing.bezier(0.4, 0, 0.6, 1),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished) setOpen(null);
     });
   };
 
@@ -196,6 +244,7 @@ export default function HistoryScreen({ navigation }) {
             expense={item}
             checked={isChecked(item.id)}
             onToggle={() => toggle(item.id)}
+            onOpen={openExpense}
           />
         )}
         extraData={`${selectAll}-${selected.length}-${excluded.length}`}
@@ -249,6 +298,64 @@ export default function HistoryScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       )}
+
+      {open && <ExpandedReceipt expense={open.expense} frame={open.frame} grow={grow} onClose={closeExpense} />}
+    </View>
+  );
+}
+
+function ExpandedReceipt({ expense, frame, grow, onClose }) {
+  const between = (from, to) => grow.interpolate({ inputRange: [0, 1], outputRange: [from, to] });
+  const split = (expense.split || []).map((person, i) => ({ ...person, idx: i }));
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: grow }]} />
+
+      <Animated.View
+        style={[styles.sheet, {
+          left: between(frame.x, OPEN_FRAME.x),
+          top: between(frame.y, OPEN_FRAME.y),
+          width: between(frame.width, OPEN_FRAME.width),
+          height: between(frame.height, OPEN_FRAME.height),
+        }]}
+      >
+        {/* What the row looked like, fading out as the card outgrows it */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.rowGhost, { opacity: grow.interpolate({ inputRange: [0, 0.35], outputRange: [1, 0], extrapolate: 'clamp' }) }]}
+        >
+          <View style={styles.rowText}>
+            <Text style={styles.rowLabel} numberOfLines={1}>
+              {expense.label || 'untitled expense'}
+            </Text>
+            <Text style={styles.rowDate}>{fullDate(expense.savedAt)}</Text>
+          </View>
+          <Text style={styles.rowAmount}>{expense.amount.toFixed(2)}{'€'}</Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[styles.sheetBody, { opacity: grow.interpolate({ inputRange: [0.3, 1], outputRange: [0, 1], extrapolate: 'clamp' }) }]}
+        >
+          <View style={styles.sheetHead}>
+            <View style={styles.sheetHeadText}>
+              <Text style={styles.sheetTitle} numberOfLines={2}>
+                {expense.label || 'untitled expense'}
+              </Text>
+              <Text style={styles.sheetDate}>{fullDate(expense.savedAt)}</Text>
+            </View>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeMark}>{'×'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Receipt split={split} total={expense.amount} label={expense.label} />
+
+          <Text style={styles.sheetNote}>
+            Saved as it stood that day. Changing the gang since leaves this untouched.
+          </Text>
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }
@@ -344,6 +451,14 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: '#fff',
   },
+  rowBody: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   rowText: {
     flex: 1,
     minWidth: 0,
@@ -363,6 +478,81 @@ const styles = StyleSheet.create({
     fontFamily: fonts.monoSemiBold,
     fontSize: 15,
     color: palette.ink,
+  },
+  // Expanded receipt
+  backdrop: {
+    backgroundColor: palette.bg,
+  },
+  sheet: {
+    position: 'absolute',
+    backgroundColor: palette.surface,
+    borderRadius: radii.cardMedium,
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    overflow: 'hidden',
+  },
+  rowGhost: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 48,
+  },
+  sheetBody: {
+    flex: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  sheetHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 18,
+  },
+  sheetHeadText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sheetTitle: {
+    fontFamily: fonts.display,
+    fontSize: 32,
+    lineHeight: 32,
+    color: palette.ink,
+    letterSpacing: -32 * 0.035,
+  },
+  sheetDate: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: palette.inkSoft,
+    marginTop: 6,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.input,
+    backgroundColor: palette.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: palette.line,
+  },
+  closeMark: {
+    fontSize: 22,
+    lineHeight: 26,
+    color: palette.ink,
+  },
+  sheetNote: {
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    lineHeight: 13 * 1.4,
+    color: palette.inkSoft,
+    textAlign: 'center',
+    marginTop: 18,
   },
   loadingMore: {
     fontFamily: fonts.mono,

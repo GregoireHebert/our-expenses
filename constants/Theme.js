@@ -17,6 +17,7 @@ export const tokens = {
   accentShadow: '#007c36',
   accentShadowLight: 'rgba(0,124,54,0.35)',
   danger:     '#bc4527',
+  dangerSoft: '#ffe6dd',
 };
 
 // Per-person palette — 6 hues cycling by index
