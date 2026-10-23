@@ -1,11 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ScrollView, StyleSheet,
+  FlatList, StyleSheet,
 } from 'react-native';
 import { palette, fonts, radii, tokens } from '../constants/Theme';
 import Expenses from '../utils/expenses';
 import { fullDate } from '../utils/format';
+
+// Two screenfuls to start with, then the same again each time the list runs out.
+const PAGE = 20;
+
+// Rows kept in memory. Scrolling past this drops the pages behind, which are read again on the way
+// back, so a history of any size costs the same to scroll through.
+const WINDOW = 300;
+
+// Selection outlives the screen: walking to the expense screen and back keeps the ticks. It is
+// session state rather than stored data, so a cold start begins with nothing selected.
+const session = { ids: [], all: false, excluded: [] };
 
 function Checkbox({ checked }) {
   return (
@@ -35,108 +46,205 @@ function ExpenseRow({ expense, checked, onToggle }) {
 }
 
 export default function HistoryScreen({ navigation }) {
-  const [expenses, setExpenses] = useState([]);
-  const [selected, setSelected] = useState([]);
+  const [items, setItems] = useState([]);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+  const [busy, setBusy] = useState(null);
+  const [ready, setReady] = useState(false);
+  const [stats, setStats] = useState({ count: 0, total: 0 });
+
+  // Two ways to hold a selection. `selected` names the ticked rows one by one. Under `selectAll`
+  // the selection is the whole history instead, and `excluded` names the rows unticked since, so
+  // the count stays honest about the pages that were never loaded.
+  const [selected, setSelected] = useState(session.ids);
+  const [selectAll, setSelectAll] = useState(session.all);
+  const [excluded, setExcluded] = useState(session.excluded);
   const [armed, setArmed] = useState(false);
 
   useEffect(() => {
-    Expenses.all(loaded => setExpenses(loaded || []));
+    session.ids = selected;
+    session.all = selectAll;
+    session.excluded = excluded;
+  }, [selected, selectAll, excluded]);
+
+  const load = useCallback((afterDelete) => {
+    if (afterDelete) {
+      setSelected([]);
+      setSelectAll(false);
+      setExcluded([]);
+    }
+    setArmed(false);
+    Expenses.stats(setStats);
+    Expenses.page(null, PAGE, (result) => {
+      setItems(result.items);
+      setAtStart(true);
+      setAtEnd(result.done);
+      setReady(true);
+    });
   }, []);
 
-  const persist = (updated) => {
-    setExpenses(updated);
-    Expenses.save(updated);
+  useEffect(() => { load(false); }, [load]);
+
+  const loadMore = () => {
+    if (busy || atEnd || !ready || items.length === 0) return;
+    setBusy('end');
+    Expenses.page(items[items.length - 1].id, PAGE, (result) => {
+      const total = items.length + result.items.length;
+      setItems(current => {
+        const next = [...current, ...result.items];
+        return next.length > WINDOW ? next.slice(next.length - WINDOW) : next;
+      });
+      if (total > WINDOW) setAtStart(false);
+      setAtEnd(result.done);
+      setBusy(null);
+    });
   };
 
-  const total = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  const allSelected = expenses.length > 0 && selected.length === expenses.length;
+  const loadPrevious = () => {
+    if (busy || atStart || !ready || items.length === 0) return;
+    setBusy('start');
+    Expenses.pageBefore(items[0].id, PAGE, (result) => {
+      const total = items.length + result.items.length;
+      setItems(current => {
+        const next = [...result.items, ...current];
+        return next.length > WINDOW ? next.slice(0, WINDOW) : next;
+      });
+      if (total > WINDOW) setAtEnd(false);
+      setAtStart(result.done);
+      setBusy(null);
+    });
+  };
+
+  const selectedCount = selectAll ? stats.count - excluded.length : selected.length;
+  const isChecked = (id) => selectAll ? !excluded.includes(id) : selected.includes(id);
 
   const toggle = (id) => {
     setArmed(false);
+    if (selectAll) {
+      setExcluded(current => current.includes(id)
+        ? current.filter(x => x !== id)
+        : [...current, id]);
+      return;
+    }
     setSelected(current => current.includes(id)
       ? current.filter(x => x !== id)
       : [...current, id]);
   };
 
-  const toggleAll = () => {
+  const selectEverything = () => {
     setArmed(false);
-    setSelected(allSelected ? [] : expenses.map(e => e.id));
+    setSelected([]);
+    setExcluded([]);
+    setSelectAll(true);
+  };
+
+  const clearSelection = () => {
+    setArmed(false);
+    setSelected([]);
+    setExcluded([]);
+    setSelectAll(false);
   };
 
   // Deleting cannot be undone, so every removal goes through here: the button arms itself on the
   // first tap and commits on the second.
   const removeSelected = () => {
-    if (selected.length === 0) return;
+    if (selectedCount === 0) return;
     if (!armed) {
       setArmed(true);
       return;
     }
-    persist(expenses.filter(e => !selected.includes(e.id)));
-    setSelected([]);
-    setArmed(false);
+    const after = () => load(true);
+    if (selectAll) {
+      if (excluded.length === 0) {
+        Expenses.clear(after);
+      } else {
+        Expenses.keepOnly(excluded, after);
+      }
+      return;
+    }
+    Expenses.remove(selected, after);
   };
+
+
+  const header = (
+    <View>
+      <View style={styles.headerRow}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backArrow}>{'\u2190'}</Text>
+        </TouchableOpacity>
+        <Text style={styles.stepLabel}>what you spent</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <Text style={styles.title}>History</Text>
+      <Text style={styles.subtitle}>
+        {stats.count > 0
+          ? `${stats.count} expense${stats.count > 1 ? 's' : ''}, ${stats.total.toFixed(2)}\u20AC all together.`
+          : 'Every expense you save lands here.'}
+      </Text>
+      {busy === 'start' && <Text style={styles.loadingMore}>loading earlier{'\u2026'}</Text>}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* Header row */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backArrow}>{'←'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.stepLabel}>what you spent</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        {/* Title */}
-        <Text style={styles.title}>History</Text>
-        <Text style={styles.subtitle}>
-          {expenses.length > 0
-            ? `${expenses.length} expense${expenses.length > 1 ? 's' : ''}, ${total.toFixed(2)}€ all together.`
-            : 'Every expense you save lands here.'}
-        </Text>
-
-        {expenses.length > 0 ? (
-          expenses.map((expense) => (
-            <ExpenseRow
-              key={expense.id}
-              expense={expense}
-              checked={selected.includes(expense.id)}
-              onToggle={() => toggle(expense.id)}
-            />
-          ))
-        ) : (
+      <FlatList
+        data={items}
+        keyExtractor={(expense) => expense.id}
+        renderItem={({ item }) => (
+          <ExpenseRow
+            expense={item}
+            checked={isChecked(item.id)}
+            onToggle={() => toggle(item.id)}
+          />
+        )}
+        extraData={`${selectAll}-${selected.length}-${excluded.length}`}
+        ListHeaderComponent={header}
+        ListEmptyComponent={ready ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
               Nothing saved yet. Type an amount on the expense screen and save it.
             </Text>
           </View>
-        )}
-      </ScrollView>
+        ) : null}
+        ListFooterComponent={busy === 'end' ? (
+          <Text style={styles.loadingMore}>loading more{'\u2026'}</Text>
+        ) : null}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        onStartReached={loadPrevious}
+        onStartReachedThreshold={0.5}
+        maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      />
 
-      {/* Selection bar */}
-      {expenses.length > 0 && (
+      {/* Selection bar, always in reach */}
+      {stats.count > 0 && (
         <View style={styles.actionWrap}>
           <View style={styles.actionRow}>
-            <TouchableOpacity onPress={toggleAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.selectAll}>
-                {allSelected ? 'Deselect all' : 'Select all'}
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.selectedCount}>{selected.length} selected</Text>
+            <View style={styles.actionLinks}>
+              {!selectAll && (
+                <TouchableOpacity onPress={selectEverything} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.linkText}>Select all</Text>
+                </TouchableOpacity>
+              )}
+              {selectedCount > 0 && (
+                <TouchableOpacity onPress={clearSelection} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.linkText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={styles.selectedCount}>{selectedCount} selected</Text>
           </View>
           <TouchableOpacity
-            style={[styles.deleteButton, selected.length === 0 && styles.deleteButtonOff]}
+            style={[styles.deleteButton, selectedCount === 0 && styles.deleteButtonOff]}
             onPress={removeSelected}
-            disabled={selected.length === 0}
+            disabled={selectedCount === 0}
           >
-            <Text style={[styles.deleteText, selected.length === 0 && styles.deleteTextOff]}>
-              {armed
-                ? `Tap again to delete ${selected.length}`
-                : `Delete${selected.length > 0 ? ` ${selected.length}` : ''}`}
+            <Text style={[styles.deleteText, selectedCount === 0 && styles.deleteTextOff]}>
+              {armed ? 'Tap again to delete' : 'Delete'}
+              {selectAll && excluded.length === 0 ? ` all ${stats.count}` : selectedCount > 0 ? ` ${selectedCount}` : ''}
             </Text>
           </TouchableOpacity>
         </View>
@@ -256,6 +364,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: palette.ink,
   },
+  loadingMore: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 11 * 0.14,
+    textTransform: 'uppercase',
+    color: palette.inkSoft,
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
   // Empty state
   emptyCard: {
     backgroundColor: palette.surface,
@@ -287,7 +404,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  selectAll: {
+  actionLinks: {
+    flexDirection: 'row',
+    gap: 18,
+  },
+  linkText: {
     fontFamily: fonts.uiSemiBold,
     fontSize: 14,
     color: palette.ink,

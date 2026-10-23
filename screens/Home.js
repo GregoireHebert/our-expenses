@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet,
@@ -17,6 +18,9 @@ const RECENT_ROW = 52;
 const RECENT_GAP = 8;
 const RECENT_HEADER = 20;
 const HISTORY_BLOCK = 88;
+
+// No screen has room for more than a handful, so the store is never asked for more than this.
+const RECENT_PAGE = 10;
 
 function AvatarDot({ idx, size = 18 }) {
   const c = personColor(idx);
@@ -132,7 +136,7 @@ export default function ExpenseScreen({ navigation }) {
           navigation.navigate('People');
         }
       });
-      Expenses.all(loaded => setExpenses(loaded || []));
+      Expenses.latest(RECENT_PAGE, loaded => setExpenses(loaded || []));
     }, [navigation])
   );
 
@@ -167,9 +171,8 @@ export default function ExpenseScreen({ navigation }) {
       split: split.map(s => ({ name: s.name, owes: s.owes, pct: s.pct })),
     };
 
-    const updated = [entry, ...expenses];
-    setExpenses(updated);
-    Expenses.save(updated);
+    setExpenses([entry, ...expenses].slice(0, RECENT_PAGE));
+    Expenses.add(entry);
     setLabel('');
     setAmount('');
   };

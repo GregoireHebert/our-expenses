@@ -34,17 +34,33 @@ and it hides while fewer than two people are saved, since nothing is reachable y
 - `Home.js` — Expense calculator: big amount input, receipt-style split, a save button, and the
   most recent saved expenses. The recent list is capped to what fits: the screen measures its own
   height and the list's offset, then divides the leftover room by a fixed row height. A receipt
-  tall enough to fill the screen leaves no rows, which is intended.
-- `History.js` — Every saved expense, newest first. Tapping a row selects it, and the one delete
-  button arms on the first tap and commits on the second. There is no single-tap removal
-  anywhere: one, several or all go through that same armed button.
+  tall enough to fill the screen leaves no rows, which is intended. The screen never asks the store
+  for more than `RECENT_PAGE` rows, since no phone can show more.
+- `History.js` — Saved expenses, newest first, in a `FlatList` holding at most `WINDOW` rows. It
+  pages forward when the list runs out and backward when you return to the top, dropping the far
+  side each time, so memory stays flat however far you scroll. `maintainVisibleContentPosition`
+  keeps the rows under your thumb still while the window slides.
+  Tapping a row selects it, and the one delete button arms on the first tap and commits on the
+  second. There is no single-tap removal anywhere: one, several or all go through that same armed
+  button. A selection is a list of ids, never a flag on a row, so it survives both the window
+  dropping a row and leaving the screen; `session` at the top of the file holds it until it is
+  cleared, deleted, or the app restarts.
+  `Select all` means the whole history rather than the loaded rows, and unticking a row under it
+  records an exclusion instead of collapsing the selection to what is on screen, which keeps the
+  counter honest about pages nobody has scrolled to.
 
-**Data persistence**: Callback-based AsyncStorage wrappers, one store per key, same shape
-(`all(callback)` / `save(list)`).
+**Data persistence**: Callback-based AsyncStorage wrappers, one module per concern.
 - `utils/db.js` — people under `@people`. Model: `{ name: string, incomes: number }`.
-- `utils/expenses.js` — saved expenses under `@expenses`, newest first. Model:
-  `{ id, label, amount, savedAt, split: [{ name, owes, pct }] }`. The split is a snapshot, so an
-  expense keeps what each person owed even after incomes change.
+- `utils/expenses.js` — one record per key, `@expense:<id>`, plus `@expenses:index`, an array of
+  `{ id, amount }` newest first. Model: `{ id, label, amount, savedAt, split: [{ name, owes, pct }] }`.
+  The split is a snapshot, so an expense keeps what each person owed even after incomes change.
+  Reading a page parses the index and that page's records only, so opening a screen costs the
+  same whether five expenses are stored or five thousand; `stats()` reads the index alone, which
+  is why the count and total never touch a record. `page(cursor, limit, cb)` walks the index from
+  the entry after `cursor`, `pageBefore` the entries before it. `keepOnly(ids)` deletes everything
+  else without reading a record, which is how `Select all` minus a few commits. `clear()` sweeps
+  every `@expense:` key rather than the index, so a record the index lost track of goes too.
+  A history written as one `@expenses` array migrates on first read.
 - `utils/format.js` — `shortDate` and `fullDate`, shared by the two lists.
 
 **Design system** (`constants/Theme.js`):
