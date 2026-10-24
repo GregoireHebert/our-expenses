@@ -49,7 +49,13 @@ function ExpenseRow({ expense, checked, onToggle, onOpen }) {
 
   return (
     <View ref={box} collapsable={false} style={[styles.row, checked && styles.rowChecked]}>
-      <TouchableOpacity onPress={onToggle} hitSlop={{ top: 12, bottom: 12, left: 12, right: 6 }}>
+      <TouchableOpacity
+        onPress={onToggle}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
+        accessibilityLabel={`select ${expense.label || 'untitled expense'}`}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 6 }}
+      >
         <Checkbox checked={checked} />
       </TouchableOpacity>
       <TouchableOpacity activeOpacity={0.7} onPress={open} style={styles.rowBody}>
@@ -87,6 +93,8 @@ export default function HistoryScreen({ navigation }) {
     session.excluded = excluded;
   }, [selected, selectAll, excluded]);
 
+  const list = useRef(null);
+
   const load = useCallback((afterDelete) => {
     if (afterDelete) {
       setSelected([]);
@@ -100,6 +108,9 @@ export default function HistoryScreen({ navigation }) {
       setAtStart(true);
       setAtEnd(result.done);
       setReady(true);
+      // The reload starts from the first page again, so an offset into the longer list it
+      // replaces points at rows that are no longer there.
+      if (afterDelete) list.current?.scrollToOffset({ offset: 0, animated: false });
     });
   }, []);
 
@@ -237,6 +248,8 @@ export default function HistoryScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <FlatList
+        ref={list}
+        testID="history-list"
         data={items}
         keyExtractor={(expense) => expense.id}
         renderItem={({ item }) => (
@@ -263,7 +276,10 @@ export default function HistoryScreen({ navigation }) {
         onEndReachedThreshold={0.5}
         onStartReached={loadPrevious}
         onStartReachedThreshold={0.5}
-        maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+        // Only once earlier pages have been dropped. While the whole history is loaded, deleting
+        // a row above the anchor leaves the list scrolled past its own content, and the screen
+        // reads as blank until it is remounted.
+        maintainVisibleContentPosition={atStart ? undefined : { minIndexForVisible: 1 }}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       />

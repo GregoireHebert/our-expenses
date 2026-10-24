@@ -61,7 +61,10 @@ and it hides while fewer than two people are saved, since nothing is reachable y
 - `History.js` — Saved expenses, newest first, in a `FlatList` holding at most `WINDOW` rows. It
   pages forward when the list runs out and backward when you return to the top, dropping the far
   side each time, so memory stays flat however far you scroll. `maintainVisibleContentPosition`
-  keeps the rows under your thumb still while the window slides.
+  keeps the rows under your thumb still while the window slides, and it is set only while
+  earlier pages have been dropped: with the whole history loaded, the anchor shifts the offset
+  when a row above it is deleted, and the list ends up scrolled past its own content. A delete
+  reloads from the first page and scrolls back to the top.
   Tapping a row selects it, and the one delete button arms on the first tap and commits on the
   second. There is no single-tap removal anywhere: one, several or all go through that same armed
   button. A selection is a list of ids, never a flag on a row, so it survives both the window
