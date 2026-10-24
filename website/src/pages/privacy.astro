@@ -1,0 +1,68 @@
+---
+import Base from "../layouts/Base.astro";
+import { SUPPORT_EMAIL, POLICY_UPDATED } from "../config";
+---
+
+<Base
+  title="Privacy policy | Our Expenses"
+  description="Our Expenses stores everything on your iPhone and sends nothing anywhere."
+>
+  <div class="shell prose">
+    <h1>Privacy policy</h1>
+    <p class="eyebrow">Last updated {POLICY_UPDATED}</p>
+
+    <p>
+      Our Expenses runs on your iPhone and talks to nothing.
+    </p>
+
+    <h2>What the app stores</h2>
+    <p>
+      Three things are stored in your device's local storage: the people you add with
+      their monthly incomes, the expenses you save, and the split each saved
+      expense produced.
+    </p>
+
+    <h2>What leaves your device</h2>
+    <p>
+      Nothing. There is no account, no login, no server, no analytics, no
+      advertising and no third-party kit reporting on you. The app makes no
+      network request of its own.
+    </p>
+
+    <h2>What Apple sees</h2>
+    <p>
+      Apple runs the download under its own privacy policy. If you switched on
+      "Share With App Developers" in your iOS settings, Apple may pass me crash
+      reports and usage counts, aggregated and stripped of anything naming you. I
+      never see who you are, who you split with, or what you spent.
+    </p>
+
+    <h2>Backups</h2>
+    <p>
+      Backing your iPhone up to iCloud or to a computer includes this app's data
+      along with the rest of the phone. Apple's encryption and policies govern
+      the backup from there.
+    </p>
+
+    <h2>Deleting your data</h2>
+    <p>
+      Remove a person from the People screen. Delete one expense, a selection, or
+      the whole history from the History screen. Deleting the app takes
+      everything it stored with it.
+    </p>
+
+    <h2>Children</h2>
+    <p>The app collects nothing from anyone, at any age.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>
+      A new version replaces this page and carries a new date at the top. The app
+      stays offline whatever this page says.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions go to <a href={"mailto:" + SUPPORT_EMAIL}>{SUPPORT_EMAIL}</a>.
+    </p>
+  </div>
+</Base>

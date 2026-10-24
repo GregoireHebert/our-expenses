@@ -15,10 +15,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "gregoirehebert@icloud.com"
-      }
-    }
+    "production": {}
   }
 }

@@ -1,0 +1,47 @@
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # The mobile app shares this repository and has no business triggering a
+    # site deploy.
+    paths:
+      - "website/**"
+      - ".github/workflows/deploy-website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one more.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The official Astro action installs, builds, and uploads dist/ as the
+      # Pages artifact. It pins its own upload-pages-artifact, so the artifact
+      # and deploy halves cannot drift out of step.
+      - uses: withastro/action@v6
+        with:
+          path: ./website
+          # Pinned rather than left to the action's default, so a new default
+          # cannot change the build under us. Satisfies engines: >=22.12.0.
+          node-version: 24
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

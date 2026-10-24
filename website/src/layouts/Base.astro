@@ -1,0 +1,44 @@
+---
+import "../styles/global.css";
+import Wordmark from "../components/Wordmark.astro";
+
+const { title, description } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const fonts =
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;600&display=swap";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta name="theme-color" content="#e9f6e9" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href={fonts} />
+  </head>
+  <body>
+    <slot />
+
+    <div class="shell">
+      <footer>
+        <a href="/" aria-label="Our Expenses home">
+          <Wordmark size="small" />
+        </a>
+        <nav>
+          <a href="/privacy">Privacy</a>
+          <a href="/support">Support</a>
+          <a href="https://gheb.dev">gheb.dev</a>
+        </nav>
+      </footer>
+    </div>
+  </body>
+</html>

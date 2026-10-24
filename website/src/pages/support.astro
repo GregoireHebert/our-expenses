@@ -1,0 +1,59 @@
+---
+import Base from "../layouts/Base.astro";
+import { SUPPORT_EMAIL } from "../config";
+---
+
+<Base
+  title="Support | Our Expenses"
+  description="How Our Expenses splits a cost, where your data lives, and how to reach a human."
+>
+  <div class="shell prose">
+    <h1>Support</h1>
+    <p class="eyebrow">Its a one person project, please give me a day or two for answering :)</p>
+
+    <h2>Getting in touch</h2>
+    <p>
+      Write to <a href={"mailto:" + SUPPORT_EMAIL}>{SUPPORT_EMAIL}</a>. For a bug,
+      tell me what you tapped, what you expected, what happened instead, and
+      which iOS version you run.
+    </p>
+
+    <h2>How is a share calculated?</h2>
+    <p>
+      The app adds every income together, works out each person's weight within
+      that sum, and applies the weight to the amount you typed. Three people
+      earning 3000, 2000 and 1000 split a 600 expense into 300, 200 and 100.
+    </p>
+
+    <h2>How many people can I add?</h2>
+    <p>Ten. The add form gives way to a note once you reach the cap.</p>
+
+    <h2>Why didn't an old receipt change when I edited an income?</h2>
+    <p>
+      A saved expense keeps the split it was created with. Editing an income
+      changes what the next expense produces and leaves your history untouched.
+    </p>
+
+    <h2>Where is my data?</h2>
+    <p>
+      In your iPhone's storage, nowhere else. The
+      <a href="/privacy">&nbsp;privacy policy</a> covers the detail.
+    </p>
+
+    <h2>How do I delete an expense?</h2>
+    <p>
+      Open History and tap a row's checkbox to select it. Tapping anywhere else
+      on the row opens its receipt instead. The delete button arms on the first
+      press and commits on the second, so no single tap destroys anything.
+      "Select all" covers your whole history, not just the rows on screen.
+    </p>
+
+    <h2>How do I remove someone?</h2>
+    <p>
+      On the People screen (top right button), press remove on their row. The row turns into a
+      confirmation with a red tick to go through with it and a cross to back out.
+      Removing a person leaves saved receipts alone, since each one carries its
+      own split.
+    </p>
+  </div>
+</Base>

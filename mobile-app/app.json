@@ -19,8 +19,8 @@
     ],
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.gheb.ourexpenses",
+      "supportsTablet": false,
+      "bundleIdentifier": "dev.gheb.ourexpenses",
       "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
@@ -29,6 +29,12 @@
     "plugins": [
       "expo-asset",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c8a859e6-f809-40d1-901d-6cd8370bf584"
+      }
+    },
+    "owner": "gregoirehebert"
   }
 }

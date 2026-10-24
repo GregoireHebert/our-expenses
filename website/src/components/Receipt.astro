@@ -1,0 +1,32 @@
+---
+// The shape mobile-app/components/Receipt.js draws, filled with one worked split.
+const rows = [
+  { name: "alex", pct: "59.1", owes: "709.09", fill: "#8ceaef" },
+  { name: "sam", pct: "40.9", owes: "490.91", fill: "#ffc3b0" },
+];
+---
+
+<div class="receipt">
+  <p class="receipt__title">OURS &middot; RECEIPT</p>
+  <p class="receipt__sub">rent</p>
+
+  {
+    rows.map((row) => (
+      <div class="receipt__row">
+        <span class="receipt__left">
+          <span class="receipt__dot" style={"background:" + row.fill}></span>
+          <span>
+            {row.name} <span class="receipt__pct">&times;{row.pct}%</span>
+          </span>
+        </span>
+        <span>{row.owes}&euro;</span>
+      </div>
+    ))
+  }
+
+  <div class="receipt__total">
+    <span>TOTAL</span>
+    <span>1200.00&euro;</span>
+  </div>
+  <p class="receipt__footer">&#9733; thanks for splitting fairly &#9733;</p>
+</div>
