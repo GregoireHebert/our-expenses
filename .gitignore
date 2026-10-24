@@ -17,8 +17,11 @@ npm-debug.*
 mobile-app/ios/
 mobile-app/android/
 mobile-app/.expo/
+
+# yarn.lock is committed: EAS Build installs with --frozen-lockfile and has nothing to
+# resolve against without it. The project uses yarn, so an npm lockfile beside it would
+# only desynchronise.
 mobile-app/package-lock.json
-mobile-app/yarn.lock
 
 # Website build output
 website/dist/
