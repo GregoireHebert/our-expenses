@@ -22,6 +22,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appName": "Our Expenses: Split Fairly",
+        "language": "en-US",
+        "sku": "dev.gheb.ourexpenses"
+      }
+    }
   }
 }
